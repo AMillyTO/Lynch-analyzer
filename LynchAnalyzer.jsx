@@ -523,10 +523,35 @@ function MiniCard({ label, value, color, sub }) {
 }
 
 function PositionTracker({ result }) {
-  const [costBasis, setCostBasis] = useState("");
-  const [shares, setShares] = useState("");
-  const [checks, setChecks] = useState({});
+  const key = "lynch_pos_" + result.ticker;
+
+  const [costBasis, setCostBasis] = useState(() => {
+    try { return localStorage.getItem(key + "_cost") || ""; } catch(e) { return ""; }
+  });
+  const [shares, setShares] = useState(() => {
+    try { return localStorage.getItem(key + "_shares") || ""; } catch(e) { return ""; }
+  });
+  const [checks, setChecks] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(key + "_checks") || "{}"); } catch(e) { return {}; }
+  });
   const [showStory, setShowStory] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  function handleCostChange(val) {
+    setCostBasis(val);
+    try { localStorage.setItem(key + "_cost", val); } catch(e) {}
+    setSaved(true); setTimeout(() => setSaved(false), 1500);
+  }
+  function handleSharesChange(val) {
+    setShares(val);
+    try { localStorage.setItem(key + "_shares", val); } catch(e) {}
+    setSaved(true); setTimeout(() => setSaved(false), 1500);
+  }
+  function handleCheck(i, opt) {
+    const next = { ...checks, [i]: opt };
+    setChecks(next);
+    try { localStorage.setItem(key + "_checks", JSON.stringify(next)); } catch(e) {}
+  }
 
   const cost = parseFloat(costBasis);
   const qty  = parseFloat(shares);
@@ -579,16 +604,17 @@ function PositionTracker({ result }) {
     <div style={{background:"#0a0f0a",border:"1px solid #00ff8718",borderLeft:"4px solid #00ff87",borderRadius:4,padding:20}}>
       <div style={{fontSize:9,letterSpacing:3,color:"#00ff87",textTransform:"uppercase",marginBottom:16}}>
         📊 My Position in {result.ticker}
+        {saved && <span style={{color:"#00ff87",fontSize:9,letterSpacing:1,marginLeft:8}}>✓ saved</span>}
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
         <div>
           <div style={{fontSize:9,letterSpacing:2,color:"#4b5563",textTransform:"uppercase",marginBottom:6}}>Cost Basis (per share)</div>
-          <input type="number" placeholder="e.g. 250.00" value={costBasis} onChange={e => setCostBasis(e.target.value)} style={inp} />
+          <input type="number" placeholder="e.g. 250.00" value={costBasis} onChange={e => handleCostChange(e.target.value)} style={inp} />
         </div>
         <div>
           <div style={{fontSize:9,letterSpacing:2,color:"#4b5563",textTransform:"uppercase",marginBottom:6}}>Shares Owned</div>
-          <input type="number" placeholder="e.g. 10" value={shares} onChange={e => setShares(e.target.value)} style={inp} />
+          <input type="number" placeholder="e.g. 10" value={shares} onChange={e => handleSharesChange(e.target.value)} style={inp} />
         </div>
       </div>
 
@@ -675,7 +701,7 @@ function PositionTracker({ result }) {
                 {[{opt:"yes",color:"#00ff87"},{opt:"no",color:"#f87171"},{opt:"?",color:"#fbbf24"}].map(({opt, color}) => {
                   const sel = checks[i] === opt;
                   return (
-                    <button key={opt} onClick={() => setChecks(p => ({...p, [i]: opt}))} style={{
+                    <button key={opt} onClick={() => handleCheck(i, opt)} style={{
                       background: sel ? color + "22" : "transparent",
                       border: `1px solid ${sel ? color : "#2a2a2a"}`,
                       borderRadius:3, color: sel ? color : "#4b5563",
